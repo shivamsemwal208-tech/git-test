@@ -1,0 +1,1 @@
+"""FlashGuard FastAPI application package."""

@@ -1,0 +1,1 @@
+export interface SeismicEvent { id: string; magnitude: number; depthKm: number; distanceKm: number; time: string; latitude: number; longitude: number; status: 'MONITORING' | 'DEMO ALERT'; note: string }

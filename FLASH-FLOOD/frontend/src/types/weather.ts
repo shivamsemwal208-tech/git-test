@@ -1,0 +1,1 @@
+export interface WeatherSnapshot { temperature: number; humidity: number; currentRainfall: number; rainfall1h: number; rainfall3h: number; rainfall6h: number; rainfall24h: number; forecastRainfall: number; precipitationProbability: number; windSpeed: number; windDirection: string; pressure: number; hourlyRainfall: number[] }
