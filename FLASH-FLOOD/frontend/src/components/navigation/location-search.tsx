@@ -42,8 +42,10 @@ export function LocationSearch() {
   const [lngInput, setLngInput] = useState('')
   const [coordinateName, setCoordinateName] = useState('')
   const [coordError, setCoordError] = useState<string | null>(null)
+  const [coordsOpen, setCoordsOpen] = useState(false)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchSeqRef = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const demoMatches = locations
     .filter(
@@ -56,6 +58,23 @@ export function LocationSearch() {
   useEffect(() => {
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    function handleMouseDown(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setCoordsOpen(false)
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setCoordsOpen(false)
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [])
 
@@ -119,16 +138,17 @@ export function LocationSearch() {
     setLatInput('')
     setLngInput('')
     setCoordinateName('')
+    setCoordsOpen(false)
   }
 
-  const showDropdown = query.trim().length > 0
+  const showDropdown = query.trim().length > 0 && !coordsOpen
   const hasNoResults = showDropdown && demoMatches.length === 0 && placeResults.length === 0
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <label className="sr-only" htmlFor="location-search">Search location</label>
       <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#0b2025] px-3 py-2">
-        <Search size={15} className="text-cyan-200" />
+        <Search size={15} className="shrink-0 text-cyan-200" />
         <input
           id="location-search"
           value={query}
@@ -136,9 +156,18 @@ export function LocationSearch() {
           placeholder="Search any place"
           className="w-36 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500 sm:w-56"
         />
+        <button
+          type="button"
+          onClick={() => setCoordsOpen((open) => !open)}
+          aria-label="Toggle custom coordinates"
+          aria-expanded={coordsOpen}
+          className={`shrink-0 rounded-lg p-1.5 transition ${coordsOpen ? 'bg-cyan-300/15 text-cyan-100' : 'text-slate-400 hover:bg-white/[.06] hover:text-slate-200'}`}
+        >
+          <Crosshair size={15} />
+        </button>
       </div>
       {showDropdown && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-white/10 bg-[#0b2025] p-1 shadow-2xl">
+        <div className="absolute right-0 z-50 mt-2 max-w-[calc(100vw-4rem)] overflow-hidden rounded-xl border border-white/10 bg-[#0b2025] p-1 shadow-2xl">
           {demoMatches.map((item) => (
             <button
               key={item.id}
@@ -191,47 +220,49 @@ export function LocationSearch() {
           )}
         </div>
       )}
-      <div className="mt-2 w-72 rounded-xl border border-white/10 bg-[#0b2025] p-3 shadow-2xl">
-        <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[.13em] text-cyan-200">
-          <Crosshair size={13} /> CUSTOM COORDINATES
-        </p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
+      {coordsOpen && (
+        <div className="absolute right-0 z-50 mt-2 max-w-[calc(100vw-4rem)] w-72 rounded-xl border border-white/10 bg-[#0b2025] p-3 shadow-2xl">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[.13em] text-cyan-200">
+            <Crosshair size={13} /> CUSTOM COORDINATES
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <input
+              aria-label="Latitude"
+              value={latInput}
+              onChange={(event) => setLatInput(event.target.value)}
+              placeholder="Latitude (e.g. 30.52)"
+              inputMode="decimal"
+              className="w-full rounded-lg border border-white/10 bg-white/[.03] px-2 py-1.5 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+            />
+            <input
+              aria-label="Longitude"
+              value={lngInput}
+              onChange={(event) => setLngInput(event.target.value)}
+              placeholder="Longitude (e.g. 79.56)"
+              inputMode="decimal"
+              className="w-full rounded-lg border border-white/10 bg-white/[.03] px-2 py-1.5 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+            />
+          </div>
           <input
-            aria-label="Latitude"
-            value={latInput}
-            onChange={(event) => setLatInput(event.target.value)}
-            placeholder="Latitude (e.g. 30.52)"
-            inputMode="decimal"
-            className="w-full rounded-lg border border-white/10 bg-white/[.03] px-2 py-1.5 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+            aria-label="Location name (optional)"
+            value={coordinateName}
+            onChange={(event) => setCoordinateName(event.target.value)}
+            placeholder="Optional name"
+            className="mt-2 w-full rounded-lg border border-white/10 bg-white/[.03] px-2 py-1.5 text-xs text-slate-100 outline-none placeholder:text-slate-500"
           />
-          <input
-            aria-label="Longitude"
-            value={lngInput}
-            onChange={(event) => setLngInput(event.target.value)}
-            placeholder="Longitude (e.g. 79.56)"
-            inputMode="decimal"
-            className="w-full rounded-lg border border-white/10 bg-white/[.03] px-2 py-1.5 text-xs text-slate-100 outline-none placeholder:text-slate-500"
-          />
+          {coordError && <p className="mt-2 text-[10px] text-amber-300">{coordError}</p>}
+          <button
+            onClick={applyCoordinates}
+            className="mt-2 w-full rounded-lg bg-cyan-300/15 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-300/25"
+          >
+            Set location
+          </button>
+          <p className="mt-2 text-[10px] leading-4 text-slate-500">
+            Selected coordinates use live Open-Meteo features for a real ML risk prediction when
+            available; otherwise the risk shows an honest unavailable state.
+          </p>
         </div>
-        <input
-          aria-label="Location name (optional)"
-          value={coordinateName}
-          onChange={(event) => setCoordinateName(event.target.value)}
-          placeholder="Optional name"
-          className="mt-2 w-full rounded-lg border border-white/10 bg-white/[.03] px-2 py-1.5 text-xs text-slate-100 outline-none placeholder:text-slate-500"
-        />
-        {coordError && <p className="mt-2 text-[10px] text-amber-300">{coordError}</p>}
-        <button
-          onClick={applyCoordinates}
-          className="mt-2 w-full rounded-lg bg-cyan-300/15 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-300/25"
-        >
-          Set location
-        </button>
-        <p className="mt-2 text-[10px] leading-4 text-slate-500">
-          Selected coordinates use live Open-Meteo features for a real ML risk prediction when
-          available; otherwise the risk shows an honest unavailable state.
-        </p>
-      </div>
+      )}
     </div>
   )
 }

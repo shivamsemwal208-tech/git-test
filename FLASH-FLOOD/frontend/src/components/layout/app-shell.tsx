@@ -52,7 +52,7 @@ export function AppShell() {
             {apiError && <p className="text-[10px] text-amber-300/90">{apiError}</p>}
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <DataStatusBadge label={statusLabel} />
+            <span className="hidden sm:inline-flex"><DataStatusBadge label={statusLabel} /></span>
             <LocationSearch />
             <button aria-label="Open alerts" onClick={() => setAlertsOpen(true)} className="relative rounded-xl border border-white/10 bg-white/[.035] p-2.5 text-slate-200 hover:bg-white/[.08]">
               <Bell size={17} />
