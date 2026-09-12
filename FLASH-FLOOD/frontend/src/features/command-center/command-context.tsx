@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { demoLocations } from '../../data/demo-locations'
 import { scenarioFixtures } from '../../data/demo-scenarios'
 import { demoCommandService } from '../../services/demo-command-service'
@@ -94,6 +94,19 @@ function unavailableCommand(location: DemoLocation, scenarioId: ScenarioId): Ris
 export function CommandProvider({ children }: { children: React.ReactNode }) {
   const [selectedLocation, setSelectedLocation] = useState<DemoLocation>(demoLocations[0])
   const [scenarioId, setScenarioId] = useState<ScenarioId>('critical-flood')
+  const [emergencySimulation, setEmergencySimulation] = useState(false)
+
+  // Demo-only emergency control: while active, every consumer sees the
+  // CRITICAL-FLOOD scenario. The user's chosen scenario is preserved underneath
+  // and restored automatically when the simulation ends. It never fabricates
+  // live data — arbitrary-coordinate locations still surface the real ML
+  // prediction / honest unavailable state.
+  const toggleEmergencySimulation = useCallback(() => {
+    setEmergencySimulation((active) => !active)
+  }, [])
+
+  const effectiveScenarioId: ScenarioId = emergencySimulation ? 'critical-flood' : scenarioId
+
   const [locations, setLocations] = useState<DemoLocation[]>(demoLocations)
   const [locationsError, setLocationsError] = useState<string | null>(null)
   const [riskState, setRiskState] = useState<RiskFetchState>({
@@ -147,14 +160,14 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   const isArbitrary = location.status === 'ARBITRARY'
 
   useEffect(() => {
-    const requestKey = `${location.id}:${scenarioId}`
+    const requestKey = `${location.id}:${effectiveScenarioId}`
     let active = true
-    postRiskAssessment(location, scenarioId)
+    postRiskAssessment(location, effectiveScenarioId)
       .then((assessment) => {
         if (!active) return
         setRiskState({
           key: requestKey,
-          command: mapRiskAssessment(assessment, location, scenarioId),
+          command: mapRiskAssessment(assessment, location, effectiveScenarioId),
           error: null,
         })
       })
@@ -171,7 +184,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false
     }
-  }, [location, scenarioId, isArbitrary])
+  }, [location, effectiveScenarioId, isArbitrary])
 
   useEffect(() => {
     const requestKey = location.id
@@ -197,9 +210,9 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   }, [location, isArbitrary])
 
   useEffect(() => {
-    const requestKey = `${location.id}:${scenarioId}`
+    const requestKey = `${location.id}:${effectiveScenarioId}`
     let active = true
-    getAlerts(location, scenarioId)
+    getAlerts(location, effectiveScenarioId)
       .then((alertItems) => {
         if (!active) return
         setAlertsState({ key: requestKey, alerts: alertItems, error: null })
@@ -217,7 +230,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false
     }
-  }, [location, scenarioId, isArbitrary])
+  }, [location, effectiveScenarioId, isArbitrary])
 
   useEffect(() => {
     const requestKey = location.id
@@ -269,15 +282,15 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     }
   }, [location])
 
-  const current = riskState.key === `${location.id}:${scenarioId}`
+  const current = riskState.key === `${location.id}:${effectiveScenarioId}`
   const command = useMemo(
     () =>
       current && riskState.command
         ? riskState.command
         : isArbitrary
-          ? unavailableCommand(location, scenarioId)
-          : demoCommandService.assessment(location, scenarioId),
-    [current, riskState.command, isArbitrary, location, scenarioId],
+          ? unavailableCommand(location, effectiveScenarioId)
+          : demoCommandService.assessment(location, effectiveScenarioId),
+    [current, riskState.command, isArbitrary, location, effectiveScenarioId],
   )
 
   const placesCurrent = placesState.key === location.id
@@ -291,16 +304,16 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     },
     [placesCurrent, placesState, isArbitrary, location],
   )
-  const alertsCurrent = alertsState.key === `${location.id}:${scenarioId}`
+  const alertsCurrent = alertsState.key === `${location.id}:${effectiveScenarioId}`
   const alerts = useMemo(
     () => {
       if (isArbitrary) return []
       if (alertsCurrent && !alertsState.error && alertsState.alerts !== null) {
         return alertsState.alerts
       }
-      return demoCommandService.alerts(location, scenarioId)
+      return demoCommandService.alerts(location, effectiveScenarioId)
     },
-    [alertsCurrent, alertsState, isArbitrary, location, scenarioId],
+    [alertsCurrent, alertsState, isArbitrary, location, effectiveScenarioId],
   )
   const seismicCurrent = seismicState.key === location.id
   const seismic = useMemo(
@@ -332,7 +345,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     () => ({
       location,
       locations,
-      scenarioId,
+      scenarioId: effectiveScenarioId,
       setLocation: setSelectedLocation,
       setScenarioId,
       command,
@@ -349,11 +362,13 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         seismicState.error,
       dataSource: current && riskState.command ? 'api' : 'demo',
       riskOrigin: riskOrigin(command),
+      emergencySimulation,
+      toggleEmergencySimulation,
     }),
     [
       location,
       locations,
-      scenarioId,
+      effectiveScenarioId,
       command,
       safePlaces,
       alerts,
@@ -370,6 +385,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       placesState,
       alertsState,
       seismicState,
+      emergencySimulation,
+      toggleEmergencySimulation,
     ],
   )
 

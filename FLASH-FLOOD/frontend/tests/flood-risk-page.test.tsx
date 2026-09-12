@@ -145,6 +145,8 @@ function renderFloodRisk(payload: RiskAssessment, location: DemoLocation, scenar
     weather: { current: null, forecast: null, error: null },
     apiError: null,
     riskOrigin: 'demo',
+    emergencySimulation: false,
+    toggleEmergencySimulation: vi.fn(),
     setLocation: vi.fn(),
     setScenarioId: vi.fn(),
   })

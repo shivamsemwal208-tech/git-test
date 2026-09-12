@@ -8,12 +8,14 @@ import { hasRisk, riskStatusLabel, riskOrigin } from '../../api/risk-api'
 import { RiskGauge } from '../risk/risk-gauge'
 
 export function CommandCenterPage() {
-  const { command, alerts, safePlaces, seismic, weather, location } = useCommand()
+  const { command, alerts, safePlaces, seismic, weather, location, emergencySimulation } = useCommand()
   const liveWeather = weather.current
   const isArbitrary = location.status === 'ARBITRARY'
   const origin = riskOrigin(command)
   const statusLabel = riskStatusLabel(origin)
   const riskAvailable = hasRisk(command.probability, command.riskLevel)
+  const hasEmergencyLevel =
+    riskAvailable && (command.riskLevel === 'HIGH' || command.riskLevel === 'CRITICAL')
 
   // For demo/simulation locations the dashboard is driven by the scenario weather
   // returned by /risk/assess, so a LIVE 0 mm/h reading never contradicts the
@@ -44,7 +46,7 @@ export function CommandCenterPage() {
       : `${command.factors.join(' + ')} · Simulation fixture`
 
   const earlyWarningLabel =
-    origin === 'live' ? 'LIVE ML EARLY WARNING' : origin === 'unavailable' ? 'EARLY WARNING UNAVAILABLE' : 'SIMULATED EARLY WARNING'
+    origin === 'live' ? 'LIVE ML EARLY WARNING' : origin === 'unavailable' ? 'EARLY WARNING UNAVAILABLE' : emergencySimulation ? 'SIMULATED FLOOD WARNING · DEMO' : 'SIMULATED EARLY WARNING'
 
   return (
     <>
@@ -116,6 +118,15 @@ export function CommandCenterPage() {
                 <p className="mt-1 text-[11px] text-slate-500">
                   Follow official local authority instructions in a real emergency.
                 </p>
+                {(hasEmergencyLevel || emergencySimulation) && (
+                  <Link
+                    to="/emergency"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-bold tracking-[.12em] text-rose-100 transition hover:bg-rose-500/25"
+                  >
+                    <AlertTriangle size={14} />
+                    {emergencySimulation ? 'OPEN EMERGENCY MODE (SIMULATION)' : 'ENTER EMERGENCY MODE'}
+                  </Link>
+                )}
               </div>
             </div>
           </section>

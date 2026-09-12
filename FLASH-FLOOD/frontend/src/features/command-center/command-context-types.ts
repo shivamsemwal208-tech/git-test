@@ -30,4 +30,12 @@ export interface CommandContextValue {
    * UNAVAILABLE — the ML prediction could not be produced; no fabricated values.
    */
   riskOrigin: RiskOrigin
+  /**
+   * True while the "Simulate Emergency" demo control has forced the
+   * CRITICAL-FLOOD scenario. All values shown during the simulation are clearly
+   * labelled SIMULATION/DEMO and are never presented as live or real data.
+   */
+  emergencySimulation: boolean
+  /** Starts/stops the demo emergency simulation (DEMO only, never overrides live ML). */
+  toggleEmergencySimulation: () => void
 }

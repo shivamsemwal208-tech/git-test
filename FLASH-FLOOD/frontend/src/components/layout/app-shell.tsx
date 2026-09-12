@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AlertDrawer } from '../alerts/alert-drawer'
 import { DataStatusBadge } from '../status/data-status-badge'
+import { EmergencyModeBanner } from '../emergency/emergency-mode-banner'
 import { LocationSearch } from '../navigation/location-search'
 import { Sidebar } from '../navigation/sidebar'
 import { useCommand } from '../../features/command-center/command-context'
@@ -64,6 +65,7 @@ export function AppShell() {
             </button>
           </div>
         </header>
+        <EmergencyModeBanner />
         <main className="px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
