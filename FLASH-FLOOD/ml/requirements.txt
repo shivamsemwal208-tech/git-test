@@ -1,0 +1,7 @@
+# ML workstream dependencies (pandas, numpy, scikit-learn, joblib).
+# Install with:  python -m pip install -r ml/requirements.txt
+# Versions pinned to what is verified on Python 3.14.7 (Windows) as of 2026-09-12.
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.9.1
+joblib==1.6.0

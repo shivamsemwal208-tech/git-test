@@ -2,8 +2,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.routes.alerts import router as alerts_router
+from backend.app.api.routes.evacuation import router as evacuation_router
 from backend.app.api.routes.locations import router as locations_router
 from backend.app.api.routes.risk import router as risk_router
+from backend.app.api.routes.safe_places import router as safe_places_router
+from backend.app.api.routes.seismic import router as seismic_router
+from backend.app.api.routes.weather import router as weather_router
 
 app = FastAPI(
     title="FlashGuard API",
@@ -27,6 +32,11 @@ app.add_middleware(
 
 app.include_router(locations_router)
 app.include_router(risk_router)
+app.include_router(weather_router)
+app.include_router(seismic_router)
+app.include_router(safe_places_router)
+app.include_router(alerts_router)
+app.include_router(evacuation_router)
 
 
 @app.get("/")

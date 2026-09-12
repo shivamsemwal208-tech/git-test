@@ -26,17 +26,39 @@ def metadata() -> dict:
     return {"data_status": "DEMO", "is_simulated": True, "timestamp": "Simulation update · 09:30 IST", "disclaimer": "Deterministic demo data only; not live, official, or ML-generated."}
 
 
+def arbitrary_metadata() -> dict:
+    return {
+        "data_status": "DEMO_UNAVAILABLE",
+        "is_simulated": True,
+        "timestamp": "No real-time data",
+        "disclaimer": "No real environmental data available for arbitrary coordinates. Demo scenario values only.",
+    }
+
+
+def find_location(location_id: str) -> dict | None:
+    return next((loc for loc in LOCATIONS if loc["id"] == location_id), None)
+
+
+def is_predefined_location(location_id: str) -> bool:
+    return find_location(location_id) is not None
+
+
 def get_location(location_id: str) -> dict:
-    for location in LOCATIONS:
-        if location["id"] == location_id:
-            return location
-    raise HTTPException(status_code=404, detail=f"Unknown demo location: {location_id}")
+    location = find_location(location_id)
+    if location is None:
+        raise HTTPException(status_code=404, detail=f"Unknown demo location: {location_id}")
+    return location
+
+
+def normalize_scenario(scenario: str) -> str:
+    return scenario.replace("-", "_")
 
 
 def get_scenario(scenario: str) -> dict:
-    if scenario not in SCENARIOS:
+    key = normalize_scenario(scenario)
+    if key not in SCENARIOS:
         raise HTTPException(status_code=422, detail=f"Unsupported demo scenario: {scenario}")
-    return SCENARIOS[scenario]
+    return SCENARIOS[key]
 
 
 def weather_fields(scenario: str) -> dict:
@@ -47,11 +69,45 @@ def weather_fields(scenario: str) -> dict:
 
 def risk_assessment(location_id: str, scenario: str) -> dict:
     location = get_location(location_id)
-    fixture = get_scenario(scenario)
-    weather = weather_fields(scenario)
+    key = normalize_scenario(scenario)
+    fixture = get_scenario(key)
+    weather = weather_fields(key)
     slope = 18 if location_id == "rishikesh" else 29 if location_id == "nainital" else 34
-    terrain = {"elevation": location["elevation"], "slope": slope, "aspect": "South-east", "soil_moisture": min(96, weather["humidity"] - 5), "river_distance": 280 if location_id == "rishikesh" else 400, "drainage": "Stable" if scenario == "normal" else "Rapid runoff watch", "historical": "Seasonal exposure" if location_id == "dehradun" else "Historical context pending", "exposure": "Elevated" if fixture["risk_level"] == "CRITICAL" else "Monitoring"}
-    return metadata() | {"location_id": location_id, "scenario": scenario, "scenario_label": fixture["label"], "probability": fixture["probability"], "risk_level": fixture["risk_level"], "factors": fixture["factors"], "warning": f"{fixture['risk_level']} flood risk — simulation", "recommended_action": fixture["action"], "terrain": terrain, "weather": weather, "model_status": "Not connected — demo scenario logic only"}
+    terrain = {"elevation": location["elevation"], "slope": slope, "aspect": "South-east", "soil_moisture": min(96, weather["humidity"] - 5), "river_distance": 280 if location_id == "rishikesh" else 400, "drainage": "Stable" if key == "normal" else "Rapid runoff watch", "historical": "Seasonal exposure" if location_id == "dehradun" else "Historical context pending", "exposure": "Elevated" if fixture["risk_level"] == "CRITICAL" else "Monitoring"}
+    return metadata() | {"location_id": location_id, "scenario": key, "scenario_label": fixture["label"], "probability": fixture["probability"], "risk_level": fixture["risk_level"], "factors": fixture["factors"], "warning": f"{fixture['risk_level']} flood risk — simulation", "recommended_action": fixture["action"], "terrain": terrain, "weather": weather, "model_status": "Not connected — demo scenario logic only"}
+
+
+def arbitrary_location_id(latitude: float, longitude: float) -> str:
+    return f"arbitrary-{latitude}-{longitude}"
+
+
+def arbitrary_risk_assessment(latitude: float, longitude: float, scenario: str) -> dict:
+    key = normalize_scenario(scenario)
+    fixture = get_scenario(key)
+    weather = weather_fields(key)
+    terrain = {
+        "elevation": None,
+        "slope": None,
+        "aspect": "Unavailable",
+        "soil_moisture": None,
+        "river_distance": None,
+        "drainage": "Unavailable",
+        "historical": "Unavailable",
+        "exposure": "Unavailable",
+    }
+    return arbitrary_metadata() | {
+        "location_id": arbitrary_location_id(latitude, longitude),
+        "scenario": key,
+        "scenario_label": fixture["label"],
+        "probability": fixture["probability"],
+        "risk_level": fixture["risk_level"],
+        "factors": fixture["factors"],
+        "warning": f"{fixture['risk_level']} flood risk — simulation for coordinates {latitude}, {longitude}",
+        "recommended_action": fixture["action"],
+        "terrain": terrain,
+        "weather": weather,
+        "model_status": "Not connected — demo scenario logic only",
+    }
 
 
 def safe_places(location_id: str) -> list[dict]:
@@ -70,7 +126,8 @@ def seismic(location_id: str) -> dict:
 
 def alerts(location_id: str, scenario: str = "critical_flood") -> list[dict]:
     location = get_location(location_id)
-    fixture = get_scenario(scenario)
+    key = normalize_scenario(scenario)
+    fixture = get_scenario(key)
     severity = {"LOW": "INFO", "MODERATE": "WATCH", "HIGH": "HIGH", "CRITICAL": "CRITICAL"}[fixture["risk_level"]]
     return [{"id": "risk", "severity": severity, "title": f"Flood risk {'status' if fixture['risk_level'] == 'LOW' else 'increased'}", "time": "Simulation update · 09:30 IST", "location": location["name"], "reason": " + ".join(fixture["factors"]), "recommended_action": fixture["action"], "data_status": "DEMO"}, {"id": "terrain", "severity": "WATCH", "title": "Terrain and runoff watch", "time": "Simulation update · 09:30 IST", "location": location["name"], "reason": "Terrain indicators are illustrative demo values.", "recommended_action": "Review the terrain and map panels for context.", "data_status": "DEMO"}]
 

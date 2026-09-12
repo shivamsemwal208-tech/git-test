@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDemoAssessment } from "../api/risk-api";
 import type { DemoAssessment, ScenarioId } from "../types/risk";
+import type { DemoLocation } from "../types/location";
 
 interface DemoAssessmentState {
   assessment: DemoAssessment | null;
@@ -10,7 +11,7 @@ interface DemoAssessmentState {
 
 export function useDemoAssessment(
   scenarioId: ScenarioId,
-  locationId = "dehradun",
+  location: DemoLocation,
 ): DemoAssessmentState {
   const [state, setState] = useState<DemoAssessmentState>({
     assessment: null,
@@ -31,7 +32,7 @@ export function useDemoAssessment(
       }
     }, 0);
 
-    getDemoAssessment(scenarioId, locationId)
+    getDemoAssessment(scenarioId, location)
       .then((assessment) => {
         if (active) {
           setState({
@@ -55,7 +56,7 @@ export function useDemoAssessment(
       active = false;
       window.clearTimeout(loadingTimer);
     };
-  }, [scenarioId, locationId]);
+  }, [scenarioId, location]);
 
   return state;
 }

@@ -1,1 +1,13 @@
-export interface SafePlace { id: string; name: string; category: string; distanceKm: number; elevationM: number; status: 'Available' | 'Monitor access'; accessibility: string; latitude: number; longitude: number; }
+export interface SafePlace {
+  id: string
+  name: string
+  category: string
+  distanceKm: number
+  elevationM: number
+  status: 'Available' | 'Monitor access'
+  accessibility: string
+  latitude: number
+  longitude: number
+  recommendation?: string
+  dataStatus?: string
+}

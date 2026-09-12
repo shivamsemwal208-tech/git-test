@@ -28,6 +28,32 @@ FastAPI response → dashboard, GIS map, and warning UI
 | `data/` | Documented raw, processed, demo, and geospatial data assets |
 | `docs/` | Team agreements, data contracts, API documentation, model limitations, and demo script |
 
+## Feature engine contract (implemented — `backend/app/risk_engine/features.py`)
+
+The risk engine owns the single feature contract used by both ML training and live inference:
+
+- `FEATURE_SCHEMA` fixes feature names, units, canonical ordering, source group, and the missing-value/transform policy.
+- `rainfall_1h/3h/6h/24h/72h/7d` + `antecedent_rainfall_7d` (mm) are accumulated by
+  `weather_service` identically for the Open-Meteo forecast (live) and archive (training) sources.
+- `soil_moisture_0_to_7cm` (%) uses the 0–7 cm depth band — the depth the Open-Meteo archive API
+  exposes — so training and live inference share the same measurement.
+- `elevation` (m) comes from the live Open-Meteo elevation API.
+- `slope_degrees` / `aspect_degrees` are connected: derived from a batched 3x3 Open-Meteo
+  elevation neighbourhood (~111 m spacing) with a least-squares plane fit
+  (`terrain_provider`), using the same endpoint live and in training — never fabricated.
+- `river_distance_m` is an **optional reported field with no source connected in this release**:
+  it is always `None` by design (never a claim about water) and is excluded from the
+  model contract, so it never blocks a prediction.
+- Model contract: `MODEL_FEATURE_NAMES` / `CORE_FEATURE_NAMES` = the 11 non-optional features
+  (rainfall windows, soil, elevation, slope, aspect); `FEATURE_NAMES` keeps all 12 for the
+  schema/response.
+- Null policy: a feature is `None` when its source is unavailable or its window is incomplete;
+  nothing is estimated or imputed here. `transform_vector` applies the deterministic `log1p`
+  rainfall transform shared by training and inference.
+
+Consumers: `ml/src` (Step 4/5 of the roadmap build the dataset and train from `build_features` +
+`transform_vector`), and the future predictor service (`backend/app/risk_engine/predictor.py`).
+
 ## Core design rules
 
 1. The backend risk engine is authoritative; a future AI assistant can explain outputs but cannot determine them.

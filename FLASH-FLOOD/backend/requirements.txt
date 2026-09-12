@@ -1,2 +1,8 @@
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0
+pytest>=8.0,<9.0
+httpx>=0.27,<1.0
+# ML predictor runtime (Phase 6) — pinned to the versions verified in ml/requirements.txt
+numpy==2.5.3
+scikit-learn==1.9.1
+joblib==1.6.0

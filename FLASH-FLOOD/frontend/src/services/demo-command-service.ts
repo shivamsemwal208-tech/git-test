@@ -11,7 +11,7 @@ export const demoCommandService = {
   assessment(location: DemoLocation, scenarioId: ScenarioId) {
     const scenario = scenarioFixtures[scenarioId]
     const terrain = { elevation: location.elevation, slope: location.id === 'rishikesh' ? 18 : location.id === 'nainital' ? 29 : 34, aspect: 'South-east', soilMoisture: Math.min(96, scenario.weather.humidity - 5), riverDistance: location.id === 'rishikesh' ? 280 : 400, drainage: scenarioId === 'normal' ? 'Stable' : 'Rapid runoff watch', historical: location.id === 'dehradun' ? 'Seasonal exposure' : 'Historical context pending', exposure: scenario.riskLevel === 'CRITICAL' ? 'Elevated' : 'Monitoring' }
-    return { ...scenario, location, terrain }
+    return { ...scenario, location, terrain, warning: `${scenario.riskLevel} flood risk — simulation`, predictionStatus: null, reason: null, missingFeatures: [], modelVersion: null, modelStatus: 'Not connected — demo scenario logic only', contributingFactors: [], explanation: null, disclaimer: null }
   },
   safePlaces(location: DemoLocation): SafePlace[] {
     return [

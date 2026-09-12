@@ -7,6 +7,7 @@ import { MapPlaceholder } from "../map/map-placeholder";
 import { RiskFactors } from "../risk/risk-factors";
 import { RiskGauge } from "../risk/risk-gauge";
 import { useDemoAssessment } from "../../hooks/use-demo-assessment";
+import { demoLocations } from "../../data/demo-locations";
 import type { ScenarioId } from "../../types/risk";
 
 function DashboardLoading() {
@@ -30,9 +31,12 @@ export function DashboardShell() {
 
   const [locationId, setLocationId] = useState("dehradun");
 
+  const location =
+    demoLocations.find((item) => item.id === locationId) ?? demoLocations[0];
+
   const { assessment, isLoading, error } = useDemoAssessment(
     scenarioId,
-    locationId,
+    location,
   );
 
   if (!assessment && isLoading) return <DashboardLoading />;

@@ -24,6 +24,10 @@ If PowerShell blocks `npm`, use `npm.cmd` in place of `npm`.
 - `src/data/demo-locations.ts` contains the nine selectable Uttarakhand demo locations.
 - `src/data/demo-scenarios.ts` contains deterministic weather/risk scenario fixtures.
 - `src/services/demo-command-service.ts` is the single frontend demo adapter. It makes no HTTP calls.
+- `src/api/geocoding.ts` searches real-world places by name via the Open-Meteo Geocoding API
+  (with a Nominatim fallback) so any place on the globe can be selected, not just demo fixtures.
+  Selected places are stored as `ARBITRARY` locations with their real latitude/longitude/name and
+  the exact coordinates are sent to the backend weather and risk endpoints.
 - `src/components/map/command-map.tsx` renders the React Leaflet/OpenStreetMap map plus illustrative layers.
 - `src/features/*` contains independently maintainable feature pages.
 
@@ -33,7 +37,14 @@ Replace or supplement `demo-command-service.ts` with API-backed adapters such as
 
 ## Location and scenario behavior
 
-Location search and navigation select from local demo fixtures. A selection moves the map and refreshes all associated display fixtures. Simulation selection updates the displayed risk, weather, terrain context, alerts, safety recommendations, map context, and emergency view.
+Location search selects from local demo fixtures **and** real-world places resolved by name
+through the Open-Meteo Geocoding API (Nominatim fallback). Selecting either updates the command
+center location, moves the map and refresh all associated displays. For a geocoded place the
+frontend sends its real `latitude`/`longitude` (plus echoed `location_name`) to the backend weather
+and risk endpoints, so the dashboard shows actual Open-Meteo values — or an honest `UNAVAILABLE`
+state, never a zero/default placeholder. Custom-coordinate input rejects empty fields so a
+0.000, 0.000 location cannot be created accidentally; the map only renders when coordinates are
+finite numeric values.
 
 ## Safety wording
 
