@@ -8,20 +8,20 @@ import { hasRisk, riskStatusLabel, riskOrigin } from '../../api/risk-api'
 import { RiskGauge } from '../risk/risk-gauge'
 
 export function CommandCenterPage() {
-  const { command, alerts, safePlaces, seismic, weather, location, emergencySimulation } = useCommand()
+  const { command, alerts, safePlaces, seismic, weather, emergencySimulation } = useCommand()
   const liveWeather = weather.current
-  const isArbitrary = location.status === 'ARBITRARY'
   const origin = riskOrigin(command)
   const statusLabel = riskStatusLabel(origin)
   const riskAvailable = hasRisk(command.probability, command.riskLevel)
   const hasEmergencyLevel =
     riskAvailable && (command.riskLevel === 'HIGH' || command.riskLevel === 'CRITICAL')
 
-  // For demo/simulation locations the dashboard is driven by the scenario weather
-  // returned by /risk/assess, so a LIVE 0 mm/h reading never contradicts the
-  // simulated CRITICAL risk. Arbitrary locations stay honest: live weather when
+  // When an explicit demo scenario (origin: demo) drives the assessment, the
+  // dashboard shows the scenario weather returned by /risk/assess, so a LIVE
+  // 0 mm/h reading never contradicts a simulated CRITICAL risk. Live ML and
+  // honest-unavailable results stay live: real Open-Meteo values when
   // available, otherwise 'Unavailable' — never fabricated scenario values.
-  const scenarioDriven = !isArbitrary
+  const scenarioDriven = origin === 'demo'
   const weatherBadge = scenarioDriven
     ? 'SIMULATION · SCENARIO'
     : weather.error || liveWeather?.status === 'UNAVAILABLE'

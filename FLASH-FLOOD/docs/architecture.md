@@ -13,7 +13,7 @@ Data validation and feature preparation
             ↓
 ML inference or labelled demo scenario logic
             ↓
-Flood probability → risk classification → factor explanation
+Flood risk score → risk classification → factor explanation
             ↓
 FastAPI response → dashboard, GIS map, and warning UI
 ```
@@ -59,7 +59,7 @@ Consumers: `ml/src` (Step 4/5 of the roadmap build the dataset and train from `b
 1. The backend risk engine is authoritative; a future AI assistant can explain outputs but cannot determine them.
 2. All time-varying data must preserve timestamp, timezone, source, unit, and `live`/`historical`/`derived`/`demo` status.
 3. The training row will represent one location-time observation.
-4. Probability categories are LOW, MODERATE, HIGH, and CRITICAL using the bands in the root README.
+4. Risk-level categories are LOW, MODERATE, HIGH, and CRITICAL using the bands in the root README.
 5. A model must be evaluated with location/time-aware validation before performance claims are made.
 6. Safe-place and route guidance must communicate assumptions and must not guarantee safety.
 7. Earthquake functionality, if added later, may report events or secondary-hazard changes but must never claim earthquake prediction.
@@ -79,4 +79,4 @@ Consumers: `ml/src` (Step 4/5 of the roadmap build the dataset and train from `b
 
 ## Planned risk and explanation contract
 
-The future risk service should return a probability, category, source/data mode, timestamp, contributing factors, and warning guidance. It must identify whether a result came from a trained/evaluated model or from a demo scenario.
+The future risk service should return a risk score, category, source/data mode, timestamp, contributing factors, and warning guidance. It must identify whether a result came from a trained/evaluated model or from a demo scenario.

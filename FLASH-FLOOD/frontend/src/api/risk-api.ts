@@ -34,16 +34,18 @@ function buildLocationQuery(location: DemoLocation): string {
 }
 
 /** Builds the location request-body fields, adding coordinate metadata for arbitrary locations. */
-function buildLocationBody(location: DemoLocation): Record<string, string | number> {
+function buildLocationBody(
+  location: DemoLocation,
+  simulate = false,
+): Record<string, string | number | boolean> {
+  const body: Record<string, string | number | boolean> = { location_id: location.id }
   if (location.status === 'ARBITRARY') {
-    return {
-      location_id: location.id,
-      latitude: location.latitude,
-      longitude: location.longitude,
-      location_name: location.name,
-    }
+    body.latitude = location.latitude
+    body.longitude = location.longitude
+    body.location_name = location.name
   }
-  return { location_id: location.id }
+  if (simulate) body.simulate = true
+  return body
 }
 
 export interface RiskTerrain {
@@ -189,15 +191,23 @@ export async function getLocations(): Promise<DemoLocation[]> {
   return data.locations
 }
 
-/** POST /api/v1/risk/assess — asks the backend for the authoritative demo risk assessment. */
+/**
+ * POST /api/v1/risk/assess — risk for the location.
+ *
+ * By default this requests the LIVE weather + ML risk pipeline for any
+ * location (predefined demo locations are resolved to their own coordinates on
+ * the backend). Pass `simulate` only for an explicit simulation/demo scenario
+ * so the backend returns the deterministic scenario fixture instead.
+ */
 export async function postRiskAssessment(
   location: DemoLocation,
   scenarioId: ScenarioId,
+  simulate = false,
 ): Promise<RiskAssessment> {
   return request<RiskAssessment>('/risk/assess', {
     method: 'POST',
     body: JSON.stringify({
-      ...buildLocationBody(location),
+      ...buildLocationBody(location, simulate),
       scenario: toApiScenario(scenarioId),
     }),
   })
@@ -683,7 +693,9 @@ export async function getDemoAssessment(
     latitude: 30.3165, longitude: 78.0322, elevation: 640, status: 'DEMO',
   },
 ): Promise<DemoAssessment> {
-  const assessment = await postRiskAssessment(location, scenarioId)
+  // The legacy demo dashboard is an explicit DEMO/SIMULATION surface, so it
+  // requests the deterministic scenario fixture rather than the live ML path.
+  const assessment = await postRiskAssessment(location, scenarioId, true)
   const weatherMetrics: Metric[] = [
     { label: 'Current rainfall', value: `${assessment.weather.current_rainfall} mm/h`, detail: 'Rain gauge (illustrative)', icon: 'rain' },
     { label: 'Rainfall 24h', value: `${assessment.weather.rainfall_24h} mm`, detail: 'Last 24 hours (illustrative)', icon: 'cloud-rain' },

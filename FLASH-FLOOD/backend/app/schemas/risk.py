@@ -14,6 +14,9 @@ class RiskAssessmentRequest(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     location_name: str | None = None
+    # True only for an explicit simulation/demo scenario request: returns the
+    # deterministic scenario fixture instead of the live ML pipeline.
+    simulate: bool = False
 
     @field_validator("scenario", mode="before")
     @classmethod

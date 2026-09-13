@@ -16,15 +16,16 @@ GET  /api/v1/seismic/latest?location_id=
 POST /api/v1/evacuation/assess
 ```
 
-Most endpoints return deterministic demo data. **Live integrations**: `weather/current` and
-`weather/forecast` (Open-Meteo weather), elevation (Open-Meteo elevation API), slope/aspect
-(derived from Open-Meteo elevation), and arbitrary-coordinate seismic (USGS). Predefined demo
-locations keep deterministic demo risk, terrain, alerts, and seismic. Arbitrary coordinates now
-get a **real ML flood-risk prediction** (calibrated Random Forest baseline over live Open-Meteo
-features) from `backend/app/risk_engine/predictor.py`. The model requires the **11 non-optional
-features**; the optional `river_distance_m` has no source in this release (always `null`) and
-never blocks a prediction. No database is connected yet; the ML baseline is a research artifact,
-not a production model.
+Most endpoints return deterministic demo data, and the risk endpoint defaults to the **live ML
+** pipeline for **predefined and arbitrary locations alike** (honest prediction or unavailable —
+never fabricated). **Live integrations**: `weather/current` and `weather/forecast` (Open-Meteo
+weather), elevation (Open-Meteo elevation API), slope/aspect (derived from Open-Meteo elevation),
+arbitrary-coordinate seismic (USGS), and the **real ML flood-risk prediction** (calibrated Random
+Forest baseline over live Open-Meteo features) from `backend/app/risk_engine/predictor.py`. The
+model requires the **11 non-optional features**; the optional `river_distance_m` has no source in
+this release (always `null`) and never blocks a prediction. Deterministic demo/scenario data is
+produced **only** for an explicit simulation/demo request (`simulate: true`). No database is
+connected yet; the ML baseline is a research artifact, not a production model.
 
 ## Live weather provider (Open-Meteo)
 
@@ -119,12 +120,23 @@ shortly after midnight when fewer than 7 full days precede the current hour.
 | `DEMO`         | Deterministic scenario/fixture data (risk, terrain, alerts, seismic…). |
 | `DEMO_UNAVAILABLE` | Arbitrary-coordinates demo response without real data (non-risk resources). |
 
-Risk responses for arbitrary coordinates use `data_status: "LIVE"` with a companion
+By default `POST /api/v1/risk/assess` runs the live ML pipeline for **every** location —
+predefined demo locations are resolved to their own fixture coordinates/name and queried exactly
+like arbitrary coordinates. Responses use `data_status: "LIVE"` with a companion
 `prediction_status` (`PREDICTION` | `UNAVAILABLE`), a `reason`
 (`MODEL_UNAVAILABLE` | `DATA_INCOMPLETE`), and `missing_features`: any live feature that cannot
 be sourced makes the prediction unavailable honestly — **no demo/scenario probability is ever
-substituted** for arbitrary coordinates. Predefined demo locations keep deterministic scenario
-probability marked `data_status: "DEMO"` and `is_simulated: true`.
+substituted** for any location without an explicit simulation request.
+
+### Explicit simulation override (`simulate: true`)
+
+`POST /api/v1/risk/assess` accepts `simulate: bool` (default `false`). When `true`, the endpoint
+returns the deterministic scenario fixture for predefined demo locations (`data_status: "DEMO"`,
+`is_simulated: true`) and the deterministic arbitrary-coordinate demo for explicit coordinates.
+This is used by the explicit Simulation/Demo surfaces in the frontend (Simulation control page,
+"Simulate Emergency" control) and never presents demo values as live data. The frontend
+guarantees `simulate` is **never** sent for arbitrary-coordinate locations, whose live ML
+prediction is always preserved.
 
 The weather endpoints never label simulated or reused data as live, and the demo scenario
 `normal` / `heavy_rain` / `extreme_rain` / `critical_flood` values remain confined to the risk
@@ -141,20 +153,24 @@ A request may target coordinates that are not in the 9 predefined demo locations
 
 Behavior:
 
-- Predefined demo locations (`data_status: "DEMO"`) are unchanged.
-- Unknown `location_id` **without** coordinates → `404`.
+- Predefined demo locations are resolved to their own coordinates and run the **same live ML
+  pipeline** as arbitrary coordinates by default; they never substitute a scenario probability
+  unless the request is an explicit simulation (`simulate: true`).
+- Unknown `location_id` **without** coordinates → `404` (live or simulated).
 - Weather for arbitrary coordinates returns real provider data marked `LIVE` (or an honest
   `UNAVAILABLE` response when the provider cannot be reached).
-- Risk for arbitrary coordinates returns a **real ML prediction** (`prediction_status:
-  "PREDICTION"`, `data_status: "LIVE"`, `is_simulated: false`, `probability` 0–100, `risk_level`,
-  `contributing_factors`, `model_version`) built from live Open-Meteo/elevation/terrain features
-  via the canonical feature engine. The production artifact is **v1** and requires its 9 trained
-  features (7 rainfall windows, soil moisture, elevation); live slope/aspect are reported in the
-  response but not required, and the optional `river_distance_m` field has no source in this
-  release (`null` in the response) and never blocks a prediction. If the model artifact cannot be
-  loaded (`MODEL_UNAVAILABLE`) or any required live feature is missing (`DATA_INCOMPLETE`, e.g.
-  `rainfall_72h`/`rainfall_7d`/`antecedent_rainfall_7d` unavailable), `prediction_status:
-  "UNAVAILABLE"` with `probability: null` and a listed `missing_features`.
+- Risk for **any** location (predefined or arbitrary) returns a **real ML prediction**
+  (`prediction_status: "PREDICTION"`, `data_status: "LIVE"`, `is_simulated: false`,
+  `probability` 0–100 (relative flood risk score), `risk_level`, `contributing_factors`, `model_version`) built from live
+  Open-Meteo/elevation/terrain features via the canonical feature engine. Predefined locations
+  keep their own coordinates, `location_id`, and friendly `location_name` in the response. The
+  production artifact is **v1** and requires its 9 trained features (7 rainfall windows, soil
+  moisture, elevation); live slope/aspect are reported in the response but not required, and the
+  optional `river_distance_m` field has no source in this release (`null` in the response) and
+  never blocks a prediction. If the model artifact cannot be loaded (`MODEL_UNAVAILABLE`) or any
+  required live feature is missing (`DATA_INCOMPLETE`, e.g. `rainfall_72h`/`rainfall_7d`/
+  `antecedent_rainfall_7d` unavailable), `prediction_status: "UNAVAILABLE"` with `probability:
+  null` and a listed `missing_features`.
 - Other arbitrary-coordinate resources return `data_status: "DEMO_UNAVAILABLE"`:
   - Safe places / alerts: empty lists.
   - Seismic: `seismic_status: "DATA UNAVAILABLE"`, empty `secondary_hazards`.
@@ -163,15 +179,16 @@ Behavior:
 The backend never fabricates, reuses, or relabels another location's data for arbitrary
 coordinates.
 
-## Risk assessment response (ML for arbitrary coordinates)
+## Risk assessment response (live ML, predefined and arbitrary)
 
-For arbitrary coordinates `POST /api/v1/risk/assess` now returns a real baseline ML prediction
-when live features and the artifact are available:
+`POST /api/v1/risk/assess` returns a real baseline ML prediction for predefined locations
+(resolved to their own coordinates) and arbitrary coordinates alike, when live features and the
+artifact are available:
 
 ```json
 {
   "location_id": "arbitrary-30.5-79.3",
-  "scenario_label": "Live ML prediction",
+  "scenario_label": "Live ML Flood Risk Score",
   "probability": 66.8,
   "risk_level": "HIGH",
   "prediction_status": "PREDICTION",
@@ -192,10 +209,14 @@ when live features and the artifact are available:
 ```
 
 `risk_level` bands: `LOW` 0–<30, `MODERATE` 30–<60, `HIGH` 60–<80, `CRITICAL` 80–100.
-`probability` is a percentage (0–100). Risk-level text (warning/recommended_action) always
+`probability` is a **relative flood risk score** on a 0–100 scale produced by the baseline model
+and mapped to the bands — it is a ranking signal (higher = higher relative risk), not a literal
+probability/chance of flooding; absolute values are not calibrated to real-world flood
+frequency. Risk-level text (warning/recommended_action) always
 communicates that the ML estimate is advisory only and never guarantees safety. When live
 features or the model artifact are unavailable, `prediction_status: "UNAVAILABLE"` with
 `probability: null`, `risk_level: null`, and an explicit `reason` + `missing_features`; the
-response never falls back to a demo/scenario probability for arbitrary coordinates. The
-`terrain.river_distance` field is always `null` in this release (no river source connected);
-the ML prediction is made from the v1 artifact's 9 required features regardless.
+response never falls back to a demo/scenario probability for any location except an explicit
+simulation request (`simulate: true`). The `terrain.river_distance` field is always `null` in
+this release (no river source connected); the ML prediction is made from the v1 artifact's 9
+required features regardless.

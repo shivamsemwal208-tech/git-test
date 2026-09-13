@@ -100,7 +100,7 @@ export function FloodRiskPage() {
           {origin === 'unavailable' && (
             <div className="mt-4 space-y-2 border-t border-white/8 pt-4 text-xs leading-5 text-slate-400">
               {command.reason && <p>{REASON_TEXT[command.reason] ?? command.reason}</p>}
-              <p>No probability or risk level is shown because none could be produced — a missing live value is never replaced with a fabricated number.</p>
+              <p>No risk score or risk level is shown because none could be produced — a missing live value is never replaced with a fabricated number.</p>
               {command.disclaimer && <p className="text-slate-500">{command.disclaimer}</p>}
             </div>
           )}

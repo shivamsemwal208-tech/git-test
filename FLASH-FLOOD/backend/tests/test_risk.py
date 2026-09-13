@@ -1,10 +1,15 @@
 import pytest
 
 
-def test_risk_assessment_normal(client):
-    response = client.post(
-        "/api/v1/risk/assess",
-        json={"location_id": "dehradun", "scenario": "normal"},
+def simulate(client, payload: dict):
+    """POST /risk/assess with an explicit simulation/demo scenario request."""
+    return client.post("/api/v1/risk/assess", json={**payload, "simulate": True})
+
+
+def test_risk_assessment_demo_scenario_normal(client):
+    response = simulate(
+        client,
+        {"location_id": "dehradun", "scenario": "normal"},
     )
     assert response.status_code == 200
     body = response.json()
@@ -14,10 +19,10 @@ def test_risk_assessment_normal(client):
     assert body["model_status"] == "Not connected — demo scenario logic only"
 
 
-def test_risk_assessment_critical(client):
-    response = client.post(
-        "/api/v1/risk/assess",
-        json={"location_id": "joshimath", "scenario": "critical_flood"},
+def test_risk_assessment_demo_scenario_critical(client):
+    response = simulate(
+        client,
+        {"location_id": "joshimath", "scenario": "critical_flood"},
     )
     assert response.status_code == 200
     body = response.json()
@@ -35,13 +40,13 @@ def test_risk_assessment_critical(client):
     ],
 )
 def test_risk_assessment_scenario_normalization(client, hyphenated, underscored):
-    hyphenated_response = client.post(
-        "/api/v1/risk/assess",
-        json={"location_id": "dehradun", "scenario": hyphenated},
+    hyphenated_response = simulate(
+        client,
+        {"location_id": "dehradun", "scenario": hyphenated},
     )
-    underscored_response = client.post(
-        "/api/v1/risk/assess",
-        json={"location_id": "dehradun", "scenario": underscored},
+    underscored_response = simulate(
+        client,
+        {"location_id": "dehradun", "scenario": underscored},
     )
     assert hyphenated_response.status_code == 200
     assert underscored_response.status_code == 200
@@ -67,13 +72,13 @@ def test_risk_assessment_invalid_scenario(client):
 
 
 def test_risk_assessment_location_variation(client):
-    dehradun = client.post(
-        "/api/v1/risk/assess",
-        json={"location_id": "dehradun", "scenario": "critical_flood"},
+    dehradun = simulate(
+        client,
+        {"location_id": "dehradun", "scenario": "critical_flood"},
     ).json()
-    nainital = client.post(
-        "/api/v1/risk/assess",
-        json={"location_id": "nainital", "scenario": "critical_flood"},
+    nainital = simulate(
+        client,
+        {"location_id": "nainital", "scenario": "critical_flood"},
     ).json()
     assert dehradun["terrain"]["elevation"] == 640
     assert nainital["terrain"]["elevation"] == 2084

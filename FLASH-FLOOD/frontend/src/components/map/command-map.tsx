@@ -127,8 +127,8 @@ export function CommandMap({
           >
             <Popup>
               {origin === 'live'
-                ? `Live ML risk zone · ${command.probability}% · ${command.riskLevel} (baseline model · ${command.modelVersion ?? '—'})`
-                : `Illustrative demo risk zone · ${command.probability}% · ${command.riskLevel} (${sourceLabel})`}
+                ? `Live ML risk zone · score ${command.probability}/100 · ${command.riskLevel} (baseline model · ${command.modelVersion ?? '—'})`
+                : `Illustrative demo risk zone · score ${command.probability}/100 · ${command.riskLevel} (${sourceLabel})`}
             </Popup>
           </Circle>
         )}

@@ -38,4 +38,12 @@ export interface CommandContextValue {
   emergencySimulation: boolean
   /** Starts/stops the demo emergency simulation (DEMO only, never overrides live ML). */
   toggleEmergencySimulation: () => void
+  /**
+   * True while the explicit "Simulation Control" page has engaged a
+   * deterministic demo scenario for built-in locations. Values are clearly
+   * labelled DEMO/SIMULATION and are never presented as live or real data.
+   */
+  simulationActive: boolean
+  /** Engages/exits the explicit demo/simulation mode used by the Simulation page. */
+  setSimulationActive: (active: boolean) => void
 }

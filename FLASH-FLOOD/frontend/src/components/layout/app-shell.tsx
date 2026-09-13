@@ -17,7 +17,7 @@ export function AppShell() {
     origin === 'live'
       ? 'LIVE · ML PREDICTION'
       : origin === 'unavailable'
-        ? 'DEMO / UNAVAILABLE'
+        ? 'RISK · UNAVAILABLE'
         : dataSource === 'api'
           ? 'API · DEMO DATA'
           : 'DEMO / SIMULATION'
@@ -26,9 +26,11 @@ export function AppShell() {
       ? origin === 'live'
         ? 'Custom coordinates · live ML risk prediction'
         : 'Custom coordinates · live risk prediction unavailable'
-      : dataSource === 'api'
-        ? 'Backend risk service'
-        : 'Local demo fixtures'
+      : origin === 'demo'
+        ? 'Built-in location · demo simulation'
+        : origin === 'unavailable'
+          ? 'Built-in location · live risk prediction unavailable'
+          : 'Built-in location · live ML risk prediction'
   return (
     <div className="min-h-screen bg-[#07151a] text-slate-100">
       <Sidebar mobileOpen={menuOpen} onClose={() => setMenuOpen(false)} />

@@ -7,6 +7,7 @@ from backend.app.schemas.risk import RiskAssessmentRequest, RiskAssessmentRespon
 from backend.app.services import weather_service
 from backend.app.services.demo_service import (
     arbitrary_location_id,
+    arbitrary_risk_assessment,
     find_location,
     risk_assessment,
 )
@@ -65,17 +66,33 @@ def _ml_factor_strings(result: dict) -> list[str]:
     return lines
 
 
-def _ml_risk_assessment(latitude: float, longitude: float, scenario: str) -> dict:
-    """Live ML risk assessment for arbitrary coordinates.
+def _ml_risk_assessment(
+    latitude: float,
+    longitude: float,
+    scenario: str,
+    *,
+    location_id: str | None = None,
+    location_name: str | None = None,
+) -> dict:
+    """Live ML risk assessment for the resolved coordinates.
 
     Builds the model input through the canonical feature engine
     (``features.live_components`` -> ``build_features``), predicts with the
     calibrated Random Forest baseline, and returns an honest result: either a
     real LIVE prediction or an explicit UNAVAILABLE result. Demo/scenario
-    probability is never substituted for arbitrary coordinates.
+    probability is never substituted.
+
+    Used for predefined demo locations (resolved to the fixture coordinates,
+    keeping the fixture id/name) and arbitrary coordinates alike, so both go
+    through the exact same live pipeline whenever real data is available.
     """
-    location_id = arbitrary_location_id(latitude, longitude)
-    location_label = f"{latitude}, {longitude}"
+    if location_id is None:
+        location_id = arbitrary_location_id(latitude, longitude)
+    location_label = (
+        location_name.strip()
+        if location_name and location_name.strip()
+        else f"{latitude:g}, {longitude:g}"
+    )
     current = weather_service.current_weather(
         latitude,
         longitude,
@@ -118,7 +135,7 @@ def _ml_risk_assessment(latitude: float, longitude: float, scenario: str) -> dic
     if result["status"] == "PREDICTION":
         level = result["risk_level"]
         return base | {
-            "scenario_label": "Live ML prediction",
+            "scenario_label": "Live ML Flood Risk Score",
             "probability": result["probability_pct"],
             "risk_level": level,
             "factors": _ml_factor_strings(result),
@@ -144,7 +161,7 @@ def _ml_risk_assessment(latitude: float, longitude: float, scenario: str) -> dic
     else:
         model_status = "Model not loaded — ML prediction unavailable"
     return base | {
-        "scenario_label": "Live ML prediction unavailable",
+        "scenario_label": "Live ML Flood Risk Score unavailable",
         "probability": None,
         "risk_level": None,
         "factors": [],
@@ -169,21 +186,52 @@ def _ml_risk_assessment(latitude: float, longitude: float, scenario: str) -> dic
 
 @router.post("/assess", response_model=RiskAssessmentResponse)
 def assess_risk(request: RiskAssessmentRequest):
+    """Risk assessment for any location id or coordinate pair.
+
+    Default (``simulate=false``): the live ML pipeline is used for predefined
+    demo locations (resolved to their own coordinates) AND arbitrary
+    coordinates, returning either a real LIVE prediction or an honest
+    UNAVAILABLE result. Deterministic demo/scenario data is produced ONLY for
+    an explicit simulation/demo scenario (``simulate=true``).
+    """
     location = find_location(request.location_id)
 
-    if location is None:
+    if request.simulate:
+        # Explicit simulation/demo scenario: deterministic fixture data.
+        if location is not None:
+            return risk_assessment(
+                location_id=request.location_id,
+                scenario=request.scenario,
+            )
         if request.latitude is None or request.longitude is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown demo location: {request.location_id}",
             )
-        return _ml_risk_assessment(
+        return arbitrary_risk_assessment(
             latitude=request.latitude,
             longitude=request.longitude,
             scenario=request.scenario,
         )
 
-    return risk_assessment(
-        location_id=request.location_id,
+    if location is not None:
+        return _ml_risk_assessment(
+            latitude=location["latitude"],
+            longitude=location["longitude"],
+            scenario=request.scenario,
+            location_id=location["id"],
+            location_name=location["name"],
+        )
+
+    if request.latitude is None or request.longitude is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown demo location: {request.location_id}",
+        )
+    return _ml_risk_assessment(
+        latitude=request.latitude,
+        longitude=request.longitude,
         scenario=request.scenario,
+        location_id=request.location_id,
+        location_name=request.location_name,
     )

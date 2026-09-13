@@ -1,8 +1,9 @@
 """Focused tests for wiring the real ML predictor into /risk/assess (Phase 7).
 
-Covers: arbitrary coordinates -> real ML prediction, missing live feature ->
-honest unavailable, model status/version propagation, demo scenario behavior
-intact, and existing risk API compatibility.
+Covers: predefined and arbitrary coordinates -> real ML prediction, missing
+live feature -> honest unavailable, model status/version propagation, explicit
+simulation/demo scenario behavior (``simulate: true``) intact, and existing
+risk API compatibility.
 """
 import pytest
 
@@ -141,7 +142,57 @@ def test_arbitrary_corrupt_model_reports_model_unavailable(
     assert "no demo/scenario probability was substituted" in body["disclaimer"].lower()
 
 
-# ─── Demo scenario behavior remains intact ───────────────────────────────
+# ─── Predefined demo locations -> live ML pipeline ───────────────────────
+
+def test_predefined_location_uses_live_ml_pipeline(
+    client, mock_open_meteo, mock_elevation, open_meteo_canned
+):
+    with_full_history(client, mock_open_meteo, open_meteo_canned)
+    response = assess(client, {"location_id": "dehradun", "scenario": "normal"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["prediction_status"] == "PREDICTION"
+    assert body["data_status"] == "LIVE"
+    assert body["is_simulated"] is False
+    assert body["location_id"] == "dehradun"
+    assert isinstance(body["probability"], float)
+    assert 0.0 <= body["probability"] <= 100.0
+    assert body["probability"] not in (18.0, 51.0, 74.0, 87.0)  # not demo constants
+    assert body["model_status"] != "Not connected — demo scenario logic only"
+
+
+def test_predefined_location_uses_its_own_fixture_coordinates(
+    client, mock_open_meteo, mock_elevation, open_meteo_canned
+):
+    # joshimath carries distinct fixture coordinates; the live pipeline must
+    # query weather/elevation for those coordinates, not the arbitrary default.
+    with_full_history(client, mock_open_meteo, open_meteo_canned)
+    assess(client, {"location_id": "joshimath", "scenario": "normal"})
+    assert mock_open_meteo.calls[-1]["latitude"] == 30.555
+    assert mock_open_meteo.calls[-1]["longitude"] == 79.565
+
+
+def test_predefined_location_honest_unavailable(client, mock_open_meteo, mock_elevation):
+    # Default mock has only 24h history -> the live ML windows are missing, so
+    # the predefined location must return an honest UNAVAILABLE (no fabricated
+    # probability, no demo substitution without simulate: true).
+    response = assess(client, {"location_id": "dehradun", "scenario": "normal"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["prediction_status"] == "UNAVAILABLE"
+    assert body["reason"] == "DATA_INCOMPLETE"
+    assert body["probability"] is None
+    assert body["risk_level"] is None
+    assert body["is_simulated"] is False
+    assert set(body["missing_features"]) == {
+        "rainfall_72h",
+        "rainfall_7d",
+        "antecedent_rainfall_7d",
+    }
+    assert body["location_id"] == "dehradun"
+
+
+# ─── Demo scenario behavior remains intact (explicit simulate: true) ─────
 
 def test_predefined_demo_location_scenario_unchanged(client):
     for scenario, probability, level in (
@@ -150,7 +201,10 @@ def test_predefined_demo_location_scenario_unchanged(client):
         ("extreme_rain", 74, "HIGH"),
         ("critical_flood", 87, "CRITICAL"),
     ):
-        body = assess(client, {"location_id": "joshimath", "scenario": scenario}).json()
+        body = assess(
+            client,
+            {"location_id": "joshimath", "scenario": scenario, "simulate": True},
+        ).json()
         assert body["data_status"] == "DEMO"
         assert body["is_simulated"] is True
         assert body["probability"] == probability
@@ -162,12 +216,15 @@ def test_predefined_demo_location_scenario_unchanged(client):
 def test_predefined_demo_never_uses_predictor(
     client, mock_open_meteo, mock_elevation, tmp_path
 ):
-    # Even if the model is pointing at a corrupt artifact, demo locations must
-    # keep their scenario result untouched.
+    # Even if the model is pointing at a corrupt artifact, an explicit
+    # simulation request keeps its scenario result untouched.
     corrupt = tmp_path / "corrupt.joblib"
     corrupt.write_bytes(b"garbage model payload")
     predictor.configure(corrupt)
-    response = assess(client, {"location_id": "dehradun", "scenario": "critical_flood"})
+    response = assess(
+        client,
+        {"location_id": "dehradun", "scenario": "critical_flood", "simulate": True},
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["data_status"] == "DEMO"
@@ -202,6 +259,9 @@ def test_risk_unknown_location_without_coordinates_404(client):
 
 
 def test_risk_scenario_normalization_still_applies(client):
-    response = assess(client, {"location_id": "dehradun", "scenario": "critical-flood"})
+    response = assess(
+        client,
+        {"location_id": "dehradun", "scenario": "critical-flood", "simulate": True},
+    )
     assert response.status_code == 200
     assert response.json()["probability"] == 87

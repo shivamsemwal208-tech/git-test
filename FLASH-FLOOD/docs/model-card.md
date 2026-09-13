@@ -23,7 +23,10 @@ Binary flood classification:
 The live predictor (`backend/app/risk_engine/predictor.py`) maps the fitted
 v1 artifact's calibrated probability to the documented risk bands and serves
 arbitrary-coordinate requests; the frontend's predefined demo locations stay
-on deterministic demo data and are unchanged.
+on deterministic demo data and are unchanged. In the product UI/API the value
+is presented as a **relative flood risk score** (0–100, bands below) — a
+ranking signal, not a literal probability/chance of flooding; absolute values
+are not calibrated to real-world flood frequency.
 
 ## Baselines and comparison
 

@@ -4,6 +4,7 @@ import { RainfallChart } from '../../components/charts/rainfall-chart'
 import { PageHeader } from '../../components/layout/page-header'
 import { DataStatusBadge } from '../../components/status/data-status-badge'
 import { useCommand } from '../command-center/command-context'
+import { riskOrigin } from '../../api/risk-api'
 
 function fmt(value: number | null | undefined, suffix = ''): string {
   return value === null || value === undefined ? 'Unavailable' : `${value}${suffix}`
@@ -26,10 +27,12 @@ function WeatherPanel() {
   const live = fromLive ? current : null
   const isLoading = current === null && weather.forecast === null && !weatherError
 
-  const isArbitrary = location.status === 'ARBITRARY'
-  const defaultSource: Source = isArbitrary ? 'live' : 'scenario'
+  // The scenario (SIMULATION) source is only meaningful when an explicit demo
+  // scenario is driving the risk assessment; otherwise live is the default and
+  // simulated values are never presented as live data.
+  const simulationScenario = riskOrigin(command) === 'demo'
   const [requested, setRequested] = useState<Source | null>(null)
-  const source: Source = requested ?? defaultSource
+  const source: Source = simulationScenario ? (requested ?? 'scenario') : 'live'
   const showingScenario = source === 'scenario'
 
   const scenario = command.weather

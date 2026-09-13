@@ -95,6 +95,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   const [selectedLocation, setSelectedLocation] = useState<DemoLocation>(demoLocations[0])
   const [scenarioId, setScenarioId] = useState<ScenarioId>('critical-flood')
   const [emergencySimulation, setEmergencySimulation] = useState(false)
+  // Explicit "Simulation Control" mode (Simulation page): while active, the
+  // command center shows the deterministic demo scenario fixture for built-in
+  // locations. It is always clearly labelled DEMO/SIMULATION.
+  const [simulationActive, setSimulationActive] = useState(false)
 
   // Demo-only emergency control: while active, every consumer sees the
   // CRITICAL-FLOOD scenario. The user's chosen scenario is preserved underneath
@@ -159,10 +163,14 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   }, [locations, selectedLocation])
   const isArbitrary = location.status === 'ARBITRARY'
 
+  // Explicit simulation/demo only applies to built-in locations; arbitrary
+  // coordinates always keep the live ML pipeline (never overridden).
+  const simulate = (emergencySimulation || simulationActive) && !isArbitrary
+
   useEffect(() => {
     const requestKey = `${location.id}:${effectiveScenarioId}`
     let active = true
-    postRiskAssessment(location, effectiveScenarioId)
+    postRiskAssessment(location, effectiveScenarioId, simulate)
       .then((assessment) => {
         if (!active) return
         setRiskState({
@@ -178,13 +186,13 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           command: null,
           error: isArbitrary
             ? 'Risk API unavailable — live ML prediction cannot be retrieved'
-            : 'Risk API unavailable — using demo scenario values',
+            : 'Risk API unavailable — live risk cannot be retrieved',
         })
       })
     return () => {
       active = false
     }
-  }, [location, effectiveScenarioId, isArbitrary])
+  }, [location, effectiveScenarioId, isArbitrary, simulate])
 
   useEffect(() => {
     const requestKey = location.id
@@ -287,10 +295,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     () =>
       current && riskState.command
         ? riskState.command
-        : isArbitrary
-          ? unavailableCommand(location, effectiveScenarioId)
-          : demoCommandService.assessment(location, effectiveScenarioId),
-    [current, riskState.command, isArbitrary, location, effectiveScenarioId],
+        : simulate
+          ? demoCommandService.assessment(location, effectiveScenarioId)
+          : unavailableCommand(location, effectiveScenarioId),
+    [current, riskState.command, simulate, location, effectiveScenarioId],
   )
 
   const placesCurrent = placesState.key === location.id
@@ -364,6 +372,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       riskOrigin: riskOrigin(command),
       emergencySimulation,
       toggleEmergencySimulation,
+      simulationActive,
+      setSimulationActive,
     }),
     [
       location,
@@ -387,6 +397,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       seismicState,
       emergencySimulation,
       toggleEmergencySimulation,
+      simulationActive,
     ],
   )
 

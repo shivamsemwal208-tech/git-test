@@ -131,8 +131,8 @@ export function EmergencyPage() {
         </h1>
         <p className="mt-3 text-sm font-bold text-cyan-200">
           {command.probability != null
-            ? `Flood probability — ${command.probability}%`
-            : 'Flood probability — unavailable (no prediction at these coordinates)'}
+            ? `${origin === 'live' ? 'ML Flood Risk Score' : 'Relative Flood Risk Score'} — ${command.probability}`
+            : `${origin === 'live' ? 'ML Flood Risk Score' : 'Relative Flood Risk Score'} — unavailable (no prediction at these coordinates)`}
         </p>
         {origin === 'live' && (
           <p className="mt-1 text-xs text-slate-400">

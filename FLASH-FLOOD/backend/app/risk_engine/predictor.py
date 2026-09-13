@@ -285,9 +285,10 @@ def _ready(model: LoadedModel, canonical: dict, probability: float,
         "risk_level": level,
         "contributing_factors": factors,
         "explanation": (
-            f"Calibrated RFC baseline version {model.version} estimates {pct}% "
-            f"flood probability ({level}) from {len(model.feature_names)} complete "
-            f"canonical features. Top inputs by learned importance: {top}."
+            f"Calibrated RFC baseline version {model.version} produces a relative flood risk "
+            f"score of {pct} out of 100 (classified {level}) from {len(model.feature_names)} "
+            f"complete canonical features. Top inputs by learned importance: {top}. The score "
+            f"is a relative ranking signal, not a literal probability of flooding."
         ),
         "model": {
             "version": model.version,
