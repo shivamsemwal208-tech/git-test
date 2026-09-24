@@ -1,0 +1,257 @@
+@import "tailwindcss";
+
+/* ────────────────────────────────────────────────────────────────────────────
+   FlashGuard design tokens — single source of truth for the command platform.
+
+   Direction: "modern emergency operations center". Deep midnight-navy base,
+   layered navy-blue surfaces, electric-blue primary, a single blue/navy design
+   language across modules, restrained terracotta warnings and a controlled
+   emergency red. Emerald is reserved exclusively for safe-place elements.
+   No yellow/amber, no neon, no glassmorphism, no glow.
+   ──────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-abyss: #08131b;
+  --color-base: #060d15;
+  --color-ink: #0a1118;
+  --color-panel: #0a1923;
+  --color-panel-2: #0c1f2b;
+  --color-panel-3: #0f2734;
+  --color-command: #38bdf8;
+  --color-command-soft: #7dd3fc;
+  --color-command-deep: #0e7490;
+  --color-safe: #34d399;
+  --color-safe-deep: #065f46;
+  --color-warn: #cf6f53;
+  --color-danger: #e0455e;
+  --color-edge: rgba(255, 255, 255, 0.08);
+
+  /* Universal severity scale (risk + emergency + alerts).
+     LOW neutral blue-gray · MODERATE muted blue · HIGH restrained red-orange
+     (terracotta) · CRITICAL strong controlled red. */
+  --color-sev-low: #7d8ea0;
+  --color-sev-low-soft: #b6c3cf;
+  --color-sev-mod: #5b8db4;
+  --color-sev-mod-soft: #9dc2dc;
+  --color-sev-high: #cf6f53;
+  --color-sev-high-soft: #e8a68e;
+  --color-sev-crit: #e0455e;
+  --color-sev-crit-soft: #f2869a;
+
+  /* Alert severity ramp (INFO · WATCH · WARNING · HIGH · CRITICAL). */
+  --color-alert-high: #d4553c;
+  --color-alert-high-soft: #f09a80;
+
+  /* Historical flood-record markers (muted ochre, informational). */
+  --color-historical: #c0996b;
+
+  /* Restrained module accents — blue/navy family (accent color only, never
+     page fills); emerald reserved for safe places, red for emergency. */
+  --color-mod-weather: #38bdf8;
+  --color-mod-terrain: #60a5fa;
+  --color-mod-seismic: #8da2b8;
+  --color-mod-safe: #34d399;
+  --color-mod-alert: #5f9acf;
+  --color-mod-emergency: #e0455e;
+  --color-mod-simulation: #93a7c8;
+  --color-mod-status: #6da8c9;
+}
+
+:root {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f8fafc;
+  background: #050d13;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+
+html { overflow-x: clip; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  overflow-x: clip;
+  /* Deep midnight-navy base with extremely subtle cool lighting. */
+  background:
+    radial-gradient(circle at 82% -8%, rgba(40, 118, 150, 0.16), transparent 26rem),
+    radial-gradient(circle at 6% 110%, rgba(18, 74, 96, 0.14), transparent 30rem),
+    linear-gradient(180deg, #061017 0%, #050d13 22%, #050d13 100%);
+  background-attachment: fixed;
+}
+
+h1, h2 { text-wrap: balance; }
+
+button { font: inherit; }
+input, select, textarea { font: inherit; }
+
+::selection { background: rgba(56, 189, 248, 0.28); }
+
+:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.75);
+  outline-offset: 2px;
+}
+
+/* Map-grid pattern used by placeholder/fallback surfaces. */
+.map-grid {
+  background-color: #0c3436;
+  background-image:
+    linear-gradient(rgba(125, 211, 252, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.075) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(14, 116, 144, 0.22), transparent 58%);
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+/* Restrained pulse for critical/active status. Collapsed by reduced-motion. */
+@keyframes status-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@layer components {
+  /* ── Layered command surfaces (16px radius family) ─────────────────────── */
+  .panel {
+    @apply rounded-2xl border border-white/[0.1] bg-panel;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.045),
+      0 18px 44px -30px rgb(0 0 0 / 0.9);
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+  /* Raised primary surface — the strongest standard treatment. */
+  .panel-strong {
+    @apply rounded-2xl border border-white/[0.16] bg-panel;
+    background-image: linear-gradient(180deg, rgb(16 40 49 / 0.7), rgb(10 27 35 / 0.2));
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.055),
+      0 28px 70px -34px rgb(0 0 0 / 0.95);
+  }
+  .panel-head {
+    @apply flex flex-wrap items-start justify-between gap-3 border-b border-white/[0.08] px-4 py-3 sm:px-5;
+  }
+  .panel-body {
+    @apply p-4 sm:p-5;
+  }
+  .sunk {
+    @apply rounded-xl border border-white/[0.06] bg-black/15;
+  }
+  /* Tertiary / minimal information tile. */
+  .tile {
+    @apply rounded-xl border border-white/[0.07] bg-white/[0.02] px-3.5 py-3;
+  }
+
+  /* Card hover-lift used by shared cards (180 ms, reduced-motion aware). */
+  .hover-lift {
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease, border-color 180ms ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Page-level enter transition (coordinated with the reduced-motion block). */
+  .page-enter {
+    animation: page-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Typographic labels — uppercase kept for small operational labels only. */
+  .eyebrow {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400;
+  }
+  .eyebrow-command {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-command;
+  }
+  .eyebrow-warn {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-warn;
+  }
+  .eyebrow-danger {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-danger;
+  }
+  .eyebrow-safe {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-safe;
+  }
+
+  /* Monospaced/consistent numerals for live data readouts. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Thin scrollbars for dense operational panels. */
+  .thin-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  }
+  .thin-scroll::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .thin-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: rgba(148, 163, 184, 0.35);
+  }
+  .thin-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* ── Buttons — shared base inlined once, then one-line variants (150-200 ms, active press) ── */
+  .btn,
+  .btn-solid,
+  .btn-cyan,
+  .btn-ghost,
+  .btn-danger,
+  .btn-amber,
+  .btn-emerald {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg text-xs font-bold transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-command disabled:cursor-not-allowed disabled:opacity-60 active:translate-y-px;
+  }
+  .btn-solid {
+    @apply border border-command/50 bg-command text-[#052033] shadow-md shadow-command/20 hover:bg-command-soft;
+  }
+  .btn-cyan {
+    @apply border border-command/40 bg-command/10 text-command-soft hover:border-command/60 hover:bg-command/[0.17];
+  }
+  .btn-ghost {
+    @apply border border-white/10 bg-white/[0.03] text-slate-200 hover:border-white/20 hover:bg-white/[0.07];
+  }
+  .btn-danger {
+    @apply border border-rose-300/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25;
+  }
+  .btn-amber {
+    @apply border border-sev-high/45 bg-sev-high/15 text-sev-high-soft hover:bg-sev-high/25;
+  }
+  .btn-emerald {
+    @apply border border-emerald-400/45 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20;
+  }
+
+  /* Live/loading pulse dot shared by "updating" readouts. */
+  .pulse-dot {
+    @apply h-1.5 w-1.5 animate-pulse rounded-full bg-command;
+  }
+
+  /* Critical status flash (warning banners, active emergency). */
+  .status-flash {
+    animation: status-flash 2.2s ease-in-out infinite;
+  }
+}
+
+/* Page entry fade/slide. Durations are collapsed by the reduced-motion block below. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,39 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Node / frontend tooling
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Generated ML artifacts and large local datasets
+ml/models/*
+!ml/models/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Local databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
