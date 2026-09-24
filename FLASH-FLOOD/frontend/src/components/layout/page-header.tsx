@@ -1,0 +1,26 @@
+import { DataStatusBadge } from '../status/data-status-badge'
+
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  statusLabel,
+  statusTone = 'cyan',
+}: {
+  eyebrow: string
+  title: string
+  description: string
+  statusLabel?: string
+  statusTone?: 'cyan' | 'emerald' | 'amber'
+}) {
+  return (
+    <div className="mb-6 flex flex-col gap-3 border-b border-white/8 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="text-[11px] font-bold tracking-[.17em] text-cyan-200">{eyebrow}</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">{description}</p>
+      </div>
+      <DataStatusBadge label={statusLabel} tone={statusTone} />
+    </div>
+  )
+}

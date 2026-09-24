@@ -1,0 +1,17 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AppShell } from './components/layout/app-shell'
+import { AboutPage } from './features/about/about-page'
+import { AlertsPage } from './features/alerts/alerts-page'
+import { CommandCenterPage } from './features/command-center/command-center-page'
+import { CommandProvider } from './features/command-center/command-context'
+import { EmergencyPage } from './features/emergency/emergency-page'
+import { EvacuationPage } from './features/evacuation/evacuation-page'
+import { FloodRiskPage } from './features/flood-risk/flood-risk-page'
+import { LiveMapPage } from './features/map/live-map-page'
+import { SafePlacesPage } from './features/safe-places/safe-places-page'
+import { SatellitePage } from './features/satellite/satellite-page'
+import { SeismicPage } from './features/seismic/seismic-page'
+import { SimulationPage } from './features/simulation/simulation-page'
+import { WeatherPage } from './features/weather/weather-page'
+
+export default function App() { return <BrowserRouter><CommandProvider><Routes><Route element={<AppShell />}><Route path="/" element={<CommandCenterPage />} /><Route path="/map" element={<LiveMapPage />} /><Route path="/weather" element={<WeatherPage />} /><Route path="/flood-risk" element={<FloodRiskPage />} /><Route path="/satellite-terrain" element={<SatellitePage />} /><Route path="/seismic" element={<SeismicPage />} /><Route path="/safe-places" element={<SafePlacesPage />} /><Route path="/evacuation" element={<EvacuationPage />} /><Route path="/alerts" element={<AlertsPage />} /><Route path="/emergency" element={<EmergencyPage />} /><Route path="/simulation" element={<SimulationPage />} /><Route path="/about" element={<AboutPage />} /></Route></Routes></CommandProvider></BrowserRouter> }
